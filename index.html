@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+    <title>Next-Gen Resume Builder</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+    <!-- pdfmake for PDF (text-based) generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <!-- docx for DOCX generation (You may need to bundle this locally in a production scenario) -->
+    <script src="https://unpkg.com/docx@8.6.2/build/index.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .transition-custom {
+            transition: all 0.3s ease;
+        }
+        .delete-btn {
+            opacity: 0; 
+            transition: opacity 0.2s ease;
+        }
+        .section-item:hover .delete-btn {
+            opacity: 1;
+        }
+        .preview-box {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .color-swatch:hover {
+            transform: scale(1.05);
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                color: #000;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- Welcome Modal -->
+    <div id="welcomeModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-6 p-8 relative">
+            <h1 class="text-4xl font-extrabold mb-4 text-gray-900">Welcome to the Next-Gen Resume Builder</h1>
+            <p class="text-gray-600 mb-6 text-lg">Craft a world-class resume with real-time preview, custom styles, and multiple export options.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="template-preview cursor-pointer bg-white rounded-xl border-4 border-transparent hover:border-indigo-500 p-4 transition-custom" onclick="selectTemplate('modern')">
+                    <div class="bg-gray-200 h-48 mb-3 rounded-lg"></div>
+                    <p class="text-center font-semibold">Modern</p>
+                </div>
+                <div class="template-preview cursor-pointer bg-white rounded-xl border-4 border-transparent hover:border-indigo-500 p-4 transition-custom" onclick="selectTemplate('professional')">
+                    <div class="bg-gray-200 h-48 mb-3 rounded-lg"></div>
+                    <p class="text-center font-semibold">Professional</p>
+                </div>
+                <div class="template-preview cursor-pointer bg-white rounded-xl border-4 border-transparent hover:border-indigo-500 p-4 transition-custom" onclick="selectTemplate('creative')">
+                    <div class="bg-gray-200 h-48 mb-3 rounded-lg"></div>
+                    <p class="text-center font-semibold">Creative</p>
+                </div>
+            </div>
+            
+            <button onclick="closeWelcomeModal()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors text-lg">
+                Start Building Your Resume
+            </button>
+        </div>
+    </div>
+
+    <header class="bg-white shadow-md py-4 px-8 flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">Next-Gen Resume Builder</h1>
+        <div class="flex space-x-4">
+            <button onclick="saveResume()" class="bg-green-600 text-white px-5 py-2 rounded hover:bg-green-700 transition-colors flex items-center">
+                <i class="fas fa-save mr-2"></i>Save
+            </button>
+            <div class="relative group">
+                <button class="bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700 transition-colors flex items-center">
+                    <i class="fas fa-download mr-2"></i>Export
+                </button>
+                <div class="absolute right-0 mt-2 bg-white border rounded shadow-lg hidden group-hover:block z-10">
+                    <button onclick="downloadPDF()" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Download as PDF</button>
+                    <button onclick="downloadDOCX()" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Download as DOCX</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Form & Controls Section -->
+        <div class="space-y-6 no-print">
+            
+            <!-- Appearance Controls -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center space-x-2">
+                    <i class="fas fa-paint-brush text-indigo-600"></i>
+                    <span>Appearance</span>
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Accent Color</label>
+                        <div class="flex space-x-2">
+                            <div class="w-8 h-8 rounded-full border-2 border-transparent cursor-pointer hover:scale-105 color-swatch" style="background-color:#4f46e5;" onclick="setAccentColor('#4f46e5')"></div>
+                            <div class="w-8 h-8 rounded-full border-2 border-transparent cursor-pointer hover:scale-105 color-swatch" style="background-color:#1f2937;" onclick="setAccentColor('#1f2937')"></div>
+                            <div class="w-8 h-8 rounded-full border-2 border-transparent cursor-pointer hover:scale-105 color-swatch" style="background-color:#dc2626;" onclick="setAccentColor('#dc2626')"></div>
+                            <input type="color" class="w-8 h-8 p-0 border-0" oninput="setAccentColor(this.value)">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Font Family</label>
+                        <select id="fontFamily" class="w-full p-2 border rounded" oninput="updatePreview()">
+                            <option value="Inter">Inter</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="Merriweather">Merriweather</option>
+                            <option value="Lato">Lato</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Personal Information -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center space-x-2">
+                    <i class="fas fa-user text-indigo-600"></i>
+                    <span>Personal Information</span>
+                </h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" id="fullName" class="w-full p-2 border rounded" placeholder="John Doe" oninput="updatePreview()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                        <input type="text" id="jobTitle" class="w-full p-2 border rounded" placeholder="Software Engineer" oninput="updatePreview()">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="email" class="w-full p-2 border rounded" placeholder="john@example.com" oninput="updatePreview()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input type="tel" id="phone" class="w-full p-2 border rounded" placeholder="+1 234 567 890" oninput="updatePreview()">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Professional Summary</label>
+                    <textarea id="summary" rows="4" class="w-full p-2 border rounded" placeholder="Brief overview of your professional background and key achievements" oninput="updatePreview()"></textarea>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input type="text" id="location" class="w-full p-2 border rounded" placeholder="City, Country" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <!-- Experience Section -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+                        <i class="fas fa-briefcase text-indigo-600"></i>
+                        <span>Work Experience</span>
+                    </h2>
+                    <button onclick="addExperience()" class="text-indigo-600 hover:text-indigo-800 text-xl">
+                        <i class="fas fa-plus-circle"></i>
+                    </button>
+                </div>
+                <div id="experienceList" class="space-y-4"></div>
+            </div>
+
+            <!-- Education Section -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-indigo-600"></i>
+                        <span>Education</span>
+                    </h2>
+                    <button onclick="addEducation()" class="text-indigo-600 hover:text-indigo-800 text-xl">
+                        <i class="fas fa-plus-circle"></i>
+                    </button>
+                </div>
+                <div id="educationList" class="space-y-4"></div>
+            </div>
+
+            <!-- Skills Section -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+                        <i class="fas fa-star text-indigo-600"></i>
+                        <span>Skills</span>
+                    </h2>
+                    <button onclick="addSkill()" class="text-indigo-600 hover:text-indigo-800 text-xl">
+                        <i class="fas fa-plus-circle"></i>
+                    </button>
+                </div>
+                <div id="skillsList" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="sticky top-20 h-full">
+            <div class="bg-white rounded-xl shadow-xl p-8 preview-box" id="resumePreview">
+                <!-- Live preview will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedTemplate = 'modern';
+        let accentColor = '#4f46e5';
+
+        let resumeData = {
+            personal: {
+                fullName: '',
+                jobTitle: '',
+                email: '',
+                phone: '',
+                location: '',
+                summary: ''
+            },
+            experience: [],
+            education: [],
+            skills: []
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedData = localStorage.getItem('resumeData');
+            if (savedData) {
+                resumeData = JSON.parse(savedData);
+                loadSavedData();
+            }
+            updatePreview();
+        });
+
+        function setAccentColor(color) {
+            accentColor = color;
+            updatePreview();
+        }
+
+        function selectTemplate(template) {
+            selectedTemplate = template;
+            updatePreview();
+        }
+
+        function closeWelcomeModal() {
+            document.getElementById('welcomeModal').style.display = 'none';
+        }
+
+        function collectFormData() {
+            resumeData.personal = {
+                fullName: document.getElementById('fullName').value,
+                jobTitle: document.getElementById('jobTitle').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                location: document.getElementById('location').value,
+                summary: document.getElementById('summary').value
+            };
+
+            // Experience
+            resumeData.experience = Array.from(document.getElementById('experienceList').children).map(item => ({
+                company: item.querySelector('input[placeholder="Company Name"]').value,
+                title: item.querySelector('input[placeholder="Job Title"]').value,
+                startDate: item.querySelector('input[placeholder="Start Date"]').value,
+                endDate: item.querySelector('input[placeholder="End Date"]').value,
+                description: item.querySelector('textarea').value
+            }));
+
+            // Education
+            resumeData.education = Array.from(document.getElementById('educationList').children).map(item => ({
+                school: item.querySelector('input[placeholder="School Name"]').value,
+                degree: item.querySelector('input[placeholder="Degree"]').value,
+                field: item.querySelector('input[placeholder="Field of Study"]').value,
+                year: item.querySelector('input[placeholder="Graduation Year"]').value
+            }));
+
+            // Skills
+            resumeData.skills = Array.from(document.getElementById('skillsList').children).map(item => ({
+                name: item.querySelector('input[placeholder="Skill"]').value,
+                level: item.querySelector('select').value
+            }));
+        }
+
+        function saveResume() {
+            collectFormData();
+            localStorage.setItem('resumeData', JSON.stringify(resumeData));
+            alert('Resume saved successfully!');
+        }
+
+        function loadSavedData() {
+            // Personal
+            document.getElementById('fullName').value = resumeData.personal.fullName;
+            document.getElementById('jobTitle').value = resumeData.personal.jobTitle;
+            document.getElementById('email').value = resumeData.personal.email;
+            document.getElementById('phone').value = resumeData.personal.phone;
+            document.getElementById('location').value = resumeData.personal.location;
+            document.getElementById('summary').value = resumeData.personal.summary;
+
+            // Experience
+            resumeData.experience.forEach(exp => addExperience(exp));
+            // Education
+            resumeData.education.forEach(edu => addEducation(edu));
+            // Skills
+            resumeData.skills.forEach(skill => addSkill(skill));
+        }
+
+        function addExperience(data = {}) {
+            const experienceList = document.getElementById('experienceList');
+            const experienceItem = document.createElement('div');
+            experienceItem.className = 'section-item bg-gray-50 p-4 rounded relative border border-gray-200';
+
+            experienceItem.innerHTML = `
+                <button class="delete-btn absolute top-2 right-2 text-red-500 hover:text-red-700" onclick="this.parentElement.remove(); updatePreview();">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <div class="grid grid-cols-2 gap-4 mb-2">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Company Name" value="${data.company || ''}" oninput="updatePreview()">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Job Title" value="${data.title || ''}" oninput="updatePreview()">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-2">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Start Date" value="${data.startDate || ''}" oninput="updatePreview()">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="End Date" value="${data.endDate || ''}" oninput="updatePreview()">
+                </div>
+                <textarea class="w-full p-2 border rounded" rows="3" placeholder="Job Description" oninput="updatePreview()">${data.description || ''}</textarea>
+            `;
+
+            experienceList.appendChild(experienceItem);
+            updatePreview();
+        }
+
+        function addEducation(data = {}) {
+            const educationList = document.getElementById('educationList');
+            const educationItem = document.createElement('div');
+            educationItem.className = 'section-item bg-gray-50 p-4 rounded relative border border-gray-200';
+
+            educationItem.innerHTML = `
+                <button class="delete-btn absolute top-2 right-2 text-red-500 hover:text-red-700" onclick="this.parentElement.remove(); updatePreview();">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <div class="grid grid-cols-2 gap-4 mb-2">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="School Name" value="${data.school || ''}" oninput="updatePreview()">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Degree" value="${data.degree || ''}" oninput="updatePreview()">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Field of Study" value="${data.field || ''}" oninput="updatePreview()">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Graduation Year" value="${data.year || ''}" oninput="updatePreview()">
+                </div>
+            `;
+
+            educationList.appendChild(educationItem);
+            updatePreview();
+        }
+
+        function addSkill(data = {}) {
+            const skillsList = document.getElementById('skillsList');
+            const skillItem = document.createElement('div');
+            skillItem.className = 'section-item bg-gray-50 p-4 rounded relative border border-gray-200';
+            
+            const levels = ['Beginner','Intermediate','Advanced','Expert'];
+            let options = '';
+            levels.forEach(l => {
+                options += `<option value="${l}" ${data.level === l ? 'selected' : ''}>${l}</option>`;
+            });
+
+            skillItem.innerHTML = `
+                <button class="delete-btn absolute top-2 right-2 text-red-500 hover:text-red-700" onclick="this.parentElement.remove(); updatePreview();">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" class="w-full p-2 border rounded" placeholder="Skill" value="${data.name || ''}" oninput="updatePreview()">
+                    <select class="w-full p-2 border rounded" oninput="updatePreview()">
+                        ${options}
+                    </select>
+                </div>
+            `;
+
+            skillsList.appendChild(skillItem);
+            updatePreview();
+        }
+
+        function updatePreview() {
+            collectFormData();
+            const preview = document.getElementById('resumePreview');
+            const fontFamily = document.getElementById('fontFamily').value;
+            
+            // Apply dynamic styles
+            preview.style.setProperty('--accent', accentColor);
+            preview.style.fontFamily = fontFamily + ', sans-serif';
+
+            // Templates can differ; we show one example (modern)
+            let expHTML = '';
+            if (resumeData.experience.length) {
+                expHTML = `
+                    <h2 class="text-xl font-bold mb-4" style="color: var(--accent)">Experience</h2>
+                    ${resumeData.experience.map(exp => `
+                        <div class="mb-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900">${exp.title || 'Job Title'}</h3>
+                                    <p class="text-sm text-gray-700">${exp.company || 'Company'}</p>
+                                </div>
+                                <p class="text-sm text-gray-500">${exp.startDate || ''} - ${exp.endDate || ''}</p>
+                            </div>
+                            <p class="text-gray-800 mt-2 text-sm">${exp.description || ''}</p>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            let eduHTML = '';
+            if (resumeData.education.length) {
+                eduHTML = `
+                    <h2 class="text-xl font-bold mb-4" style="color: var(--accent)">Education</h2>
+                    ${resumeData.education.map(edu => `
+                        <div class="mb-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900">${edu.degree || 'Degree'}</h3>
+                                    <p class="text-sm text-gray-700">${edu.school || 'School Name'} – ${edu.field || 'Field'}</p>
+                                </div>
+                                <p class="text-sm text-gray-500">${edu.year || ''}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            let skillsHTML = '';
+            if (resumeData.skills.length) {
+                skillsHTML = `
+                    <h2 class="text-xl font-bold mb-4" style="color: var(--accent)">Skills</h2>
+                    <div class="flex flex-wrap gap-2">
+                        ${resumeData.skills.map(skill => `
+                            <span class="bg-gray-200 text-gray-900 px-3 py-1 rounded-full text-sm">${skill.name || 'Skill'} (${skill.level || 'Level'})</span>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            let summaryHTML = resumeData.personal.summary ? `
+                <h2 class="text-xl font-bold mb-4" style="color: var(--accent)">Professional Summary</h2>
+                <p class="text-gray-800 mb-8">${resumeData.personal.summary}</p>
+            ` : '';
+
+            const personalInfoHTML = `
+                <h1 class="text-3xl font-extrabold text-gray-900 mb-1">${resumeData.personal.fullName || 'Your Name'}</h1>
+                <p class="text-lg text-gray-700 mb-2">${resumeData.personal.jobTitle || 'Your Title'}</p>
+                <div class="text-sm text-gray-700 flex flex-wrap gap-4 mb-8">
+                    ${resumeData.personal.email ? `<span><i class="fas fa-envelope mr-2"></i>${resumeData.personal.email}</span>` : ''}
+                    ${resumeData.personal.phone ? `<span><i class="fas fa-phone mr-2"></i>${resumeData.personal.phone}</span>` : ''}
+                    ${resumeData.personal.location ? `<span><i class="fas fa-map-marker-alt mr-2"></i>${resumeData.personal.location}</span>` : ''}
+                </div>
+            `;
+
+            // Final HTML
+            preview.innerHTML = `
+                ${personalInfoHTML}
+                ${summaryHTML}
+                ${expHTML}
+                ${eduHTML}
+                ${skillsHTML}
+            `;
+        }
+
+        function downloadPDF() {
+            collectFormData();
+            const docDefinition = {
+                content: buildPDFContent(),
+                styles: buildPDFStyles(),
+            };
+            pdfMake.createPdf(docDefinition).download("resume.pdf");
+        }
+
+        function buildPDFStyles() {
+            return {
+                headerName: { fontSize: 24, bold: true },
+                subHeader: { fontSize: 18, bold: true, color: accentColor },
+                normal: { fontSize: 12 }
+            };
+        }
+
+        function buildPDFContent() {
+            const { personal, experience, education, skills } = resumeData;
+            let content = [];
+
+            // Personal info
+            content.push({ text: personal.fullName || "Your Name", style: 'headerName', margin: [0,0,0,10] });
+            content.push({ text: personal.jobTitle || "Your Title", style: 'normal', margin: [0,0,0,5] });
+            let contactLine = [];
+            if (personal.email) contactLine.push(`Email: ${personal.email}`);
+            if (personal.phone) contactLine.push(`Phone: ${personal.phone}`);
+            if (personal.location) contactLine.push(`Location: ${personal.location}`);
+            if (contactLine.length) {
+                content.push({ text: contactLine.join(' | '), style:'normal', margin: [0,0,0,20] });
+            }
+
+            if (personal.summary) {
+                content.push({ text: "Professional Summary", style: 'subHeader', margin:[0,0,0,5] });
+                content.push({ text: personal.summary, style:'normal', margin:[0,0,0,20] });
+            }
+
+            if (experience.length) {
+                content.push({ text:"Experience", style:'subHeader', margin:[0,0,0,5] });
+                experience.forEach(exp => {
+                    content.push({ text:`${exp.title || ''} at ${exp.company || ''} (${exp.startDate||''} - ${exp.endDate||''})`, bold:true, margin:[0,5,0,2]});
+                    content.push({ text: exp.description || '', style:'normal', margin:[0,0,0,10] });
+                });
+            }
+
+            if (education.length) {
+                content.push({ text:"Education", style:'subHeader', margin:[0,20,0,5] });
+                education.forEach(edu => {
+                    content.push({ text: `${edu.degree || ''}, ${edu.field || ''} - ${edu.school || ''} (${edu.year || ''})`, style:'normal', margin:[0,5,0,10] });
+                });
+            }
+
+            if (skills.length) {
+                content.push({ text:"Skills", style:'subHeader', margin:[0,20,0,5] });
+                content.push({
+                    ul: skills.map(s => `${s.name || 'Skill'} (${s.level || ''})`),
+                    margin:[0,0,0,10]
+                });
+            }
+
+            return content;
+        }
+
+        async function downloadDOCX() {
+            collectFormData();
+            const { personal, experience, education, skills } = resumeData;
+            const { Document, Packer, Paragraph, TextRun } = window.docx;
+
+            const doc = new Document();
+
+            doc.addSection({
+                children: [
+                    new Paragraph({
+                        children: [new TextRun({ text: personal.fullName || "Your Name", bold: true, size:48 })],
+                    }),
+                    new Paragraph({
+                        children: [new TextRun({ text: personal.jobTitle || "Your Title", bold: true, size:28 })],
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: personal.email ? `Email: ${personal.email} ` : '' }),
+                            new TextRun({ text: personal.phone ? `| Phone: ${personal.phone} ` : '' }),
+                            new TextRun({ text: personal.location ? `| Location: ${personal.location}` : '' }),
+                        ],
+                    }),
+                    ...(personal.summary ? [
+                        new Paragraph({ text:"Professional Summary", heading:"Heading2" }),
+                        new Paragraph({ text: personal.summary })
+                    ]:[]),
+                    ...(experience.length ? [new Paragraph({ text:"Experience", heading:"Heading2" })] : []),
+                    ...experience.map(exp => new Paragraph({ text: `${exp.title||''} at ${exp.company||''}, ${exp.startDate||''}-${exp.endDate||''}\n${exp.description||''}` })),
+                    ...(education.length ? [new Paragraph({ text:"Education", heading:"Heading2" })] : []),
+                    ...education.map(edu => new Paragraph({ text: `${edu.degree||''}, ${edu.field||''} - ${edu.school||''} (${edu.year||''})` })),
+                    ...(skills.length ? [new Paragraph({ text:"Skills", heading:"Heading2" })] : []),
+                    ...(skills.length ? [new Paragraph({ text: skills.map(s => `${s.name} (${s.level})`).join(', ') })] : []),
+                ],
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "resume.docx";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
